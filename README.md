@@ -38,3 +38,4 @@ Python + Docker
 
 ## Design Decision
 1. Use k8s CronJob to do the scheduling.
+2. The API secrets should come from AKS which will use CSI driver.
