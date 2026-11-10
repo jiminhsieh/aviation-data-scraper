@@ -1,0 +1,12 @@
+image:
+  repository: ""
+  tag: ""
+account: ""
+vault: ""
+tenantId: ""
+identity:
+  clientId: ""
+bronzeContainer: bronze
+quarantineContainer: quarantine
+clientIdSecretName: opensky-client-id
+clientSecretSecretName: opensky-client-secret

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: opensky-collector
+version: 0.1.0
+appVersion: "0.1.0"
+description: UTC OpenSky Bronze collector (one environment per registered quota)

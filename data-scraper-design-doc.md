@@ -1,10 +1,10 @@
 # Aviation Data Scraper
 
-Collect OpenSky aircraft snapshots and archive them directly to the ADLS Gen2 Bronze zone. Ingestion ends at durable storage: separate, time-scheduled Databricks Spark batch processing owns Bronze → Silver → Gold. This collector does not publish to Kafka or trigger Databricks jobs.
+Collect OpenSky aircraft snapshots and archive them directly to the ADLS Gen2 Bronze zone. Ingestion ends at durable storage: a separate continuous Spark stream owns Bronze → Silver, and an independent scheduled SQL job owns Silver → Gold. This collector does not publish to Kafka or trigger Databricks jobs.
 
-**Status:** The direct-to-ADLS design below is adopted, with **hourly UTC Bronze partitions**. This repository currently contains only this README and a sample response; the collector, Avro schema, container image, deployment manifests and tests are not implemented yet.
+**Status:** This is design background. For the runnable collector, actual schema, tests, chart and verified local commands see [README.md](README.md). No live deployment is claimed.
 
-## Planned Tech Stack
+## Tech Stack
 
 Python, Docker, `fastavro` with Snappy support, Azure SDK, AKS CronJob, ADLS Gen2, and Azure Key Vault with Workload Identity / Secrets Store CSI.
 
@@ -103,11 +103,11 @@ Hourly partitioning groups snapshot files; it does not combine them into one fil
 - Use a dedicated Kubernetes ServiceAccount federated to an Azure managed identity through AKS Workload Identity.
 - Mount OpenSky `client_id` and `client_secret` from Key Vault through Secrets Store CSI. Never place secret values in Git, images, logs or Terraform state.
 - Grant the ingestion identity scoped Bronze create/read access for uploads and collision checks, plus quarantine write access. It needs no Silver/Gold privileges or storage-account keys. Databricks uses a separate identity.
-- Deployment inputs are the storage account, Bronze/quarantine containers, source path prefix, Key Vault secret names/mount paths, and ServiceAccount/managed-identity configuration. Exact CLI/environment variable names will be documented with the implementation.
+- Deployment inputs and exact CLI/environment variable names are in [README.md](README.md); the source path prefix is fixed by the contract.
 
 ## Implementation and Verification Checklist
 
-Runnable setup, image-build and Helm commands will be added alongside the actual collector and deployment files; no deployment can be run from this repository yet.
+Runnable setup, image-build and Helm commands are in [README.md](README.md); live provisioned validation remains outstanding.
 
 - Add the collector, Avro schema, pinned dependencies, Dockerfile, ServiceAccount, SecretProviderClass and CronJob manifests.
 - Test that the Avro round trip exactly preserves the fixture's `time`/`states` structure, all 17 positional values and their types, padded strings, nulls and nested arrays, without adding fields. Cover empty snapshots and rejection of incompatible schemas.

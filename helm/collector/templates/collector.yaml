@@ -1,0 +1,97 @@
+{{- $name := printf "%s-collector" .Release.Name -}}
+{{- $account := required "account required" .Values.account -}}
+{{- $vault := required "vault required" .Values.vault -}}
+{{- $tenant := required "tenantId required" .Values.tenantId -}}
+{{- $client := required "identity.clientId required" .Values.identity.clientId -}}
+{{- $image := required "image.repository required" .Values.image.repository -}}
+{{- $tag := required "image.tag required" .Values.image.tag -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  annotations:
+    azure.workload.identity/client-id: {{ $client | quote }}
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: {{ $name }}
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: {{ $client | quote }}
+    keyvaultName: {{ $vault | quote }}
+    tenantId: {{ $tenant | quote }}
+    objects: |
+      array:
+        - |
+          objectName: {{ .Values.clientIdSecretName }}
+          objectType: secret
+          objectAlias: client_id
+        - |
+          objectName: {{ .Values.clientSecretSecretName }}
+          objectType: secret
+          objectAlias: client_secret
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $name }}
+spec:
+  schedule: "*/2 * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      backoffLimit: 0
+      activeDeadlineSeconds: 75
+      template:
+        metadata:
+          labels:
+            azure.workload.identity/use: "true"
+        spec:
+          serviceAccountName: {{ $name }}
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: collector
+              image: {{ printf "%s:%s" $image $tag | quote }}
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              env:
+                - name: AZURE_STORAGE_ACCOUNT
+                  value: {{ $account | quote }}
+                - name: BRONZE_CONTAINER
+                  value: {{ .Values.bronzeContainer | quote }}
+                - name: QUARANTINE_CONTAINER
+                  value: {{ .Values.quarantineContainer | quote }}
+              volumeMounts:
+                - name: opensky-secrets
+                  mountPath: /mnt/secrets
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+          volumes:
+            - name: opensky-secrets
+              csi:
+                driver: secrets-store.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: {{ $name }}

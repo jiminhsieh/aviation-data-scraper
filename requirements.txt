@@ -1,0 +1,5 @@
+azure-identity==1.24.0
+azure-storage-blob==12.26.0
+fastavro==1.12.1
+python-snappy==0.7.3
+requests==2.32.5

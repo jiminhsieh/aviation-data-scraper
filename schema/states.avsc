@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "OpenSkySnapshot",
+  "namespace": "aviation.bronze",
+  "fields": [
+    {"name": "time", "type": "long"},
+    {"name": "states", "type": ["null", {"type": "array", "items": {"type": "array", "items": ["null", "string", "long", "double", "boolean", {"type": "array", "items": "long"}]}}]}
+  ]
+}
